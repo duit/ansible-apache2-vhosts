@@ -1,59 +1,51 @@
 ---
-- name: Create shared srv folder
+- name: Check for a2ensite util
+  shell: "command -v a2ensite >/dev/null 2>&1"
+  changed_when: False
+
+- name: Create vhost folders
   file:
-    path: "{{ vhost_base_path }}/shared"
+    path: "{{ vhost_base_path }}/{{ item['host'] }}"
     state: directory
+    owner: "{{ item['user'] }}"
+    group: "{{ item['group'] }}"
+  with_items: vhost_sites
 
-- name: Create blocking robots.txt
+- name: Copy deploy key
   copy:
-    src: robots.txt
-    dest: "{{ vhost_base_path }}/shared/robots.txt"
-
-- name: Create home folders
-  user:
-    name: "{{ item['user'] }}"
-    state: present
-    createhome: yes
-    generate_ssh_key: yes
-    password: ''
+    src="{{ item['gitkey'] }}"
+    dest="/tmp/{{ item['host'] }}_rsa"
+    follow=yes
+    owner="{{ item['user'] }}"
+    group="{{ item['group'] }}"
+    mode=600
   with_items: vhost_sites
+  when: "item['gitkey']|default('') != ''"
 
-- name: Add SSH public keys
-  authorized_key:
-    user: "{{ item['user'] }}"
-    key: "{{ lookup('file', '/tmp/combined_ssh.' + inventory_hostname) }}"
+- name: Clone data folder
+  git: repo="{{ item['git'] }}"
+       dest="{{ vhost_base_path }}/{{ item['host'] }}/public_html"
+       version=master
+       accept_hostkey=yes
+       depth=5
+       force=yes
+       key_file=/tmp/{{ item['host'] }}_rsa
   with_items: vhost_sites
+  when: "item['git']|default('') != ''"
 
-- name: Create public_html folders
+- name: Create data folder
   file:
     path: "{{ vhost_base_path }}/{{ item['host'] }}/public_html"
     state: directory
     owner: "{{ item['user'] }}"
     group: "{{ item['group'] }}"
   with_items: vhost_sites
+  when: "item['git']|default('') == ''"
 
-- name: Create public_html symlinks
-  file:
-    src: "{{ vhost_base_path }}/{{ item['host'] }}/public_html"
-    dest: /home/{{ item['user'] }}/public_html
-    state: link
-    owner: "{{ item['user'] }}"
-    group: "{{ item['group'] }}"
-  with_items: vhost_sites
-
-- name: Create log folders
+- name: Create log folder
   file:
     path: "{{ vhost_base_path }}/{{ item['host'] }}/logs"
     state: directory
-    owner: "{{ item['user'] }}"
-    group: "{{ item['group'] }}"
-  with_items: vhost_sites
-
-- name: Create logs symlinks
-  file:
-    src: "{{ vhost_base_path }}/{{ item['host'] }}/logs"
-    dest: /home/{{ item['user'] }}/logs
-    state: link
     owner: "{{ item['user'] }}"
     group: "{{ item['group'] }}"
   with_items: vhost_sites
@@ -64,11 +56,17 @@
     dest: /etc/apache2/sites-available/{{ item['host'] }}.conf
   with_items: vhost_sites
 
-- name: Enable apache2 vhosts
-  file:
-    src: /etc/apache2/sites-available/{{ item['host'] }}.conf
-    dest: /etc/apache2/sites-enabled/{{ item['host'] }}.conf
-    state: link
+- name: Create default index.html
+  template:
+    src: apache2/index.html.j2
+    dest: "{{ vhost_base_path }}/{{ item['host'] }}/public_html/index.html"
+    owner: "{{ item['user'] }}"
+    group: "{{ item['group'] }}"
   with_items: vhost_sites
-  notify: Restart apache
+  when: "item['git']|default('') == ''"
+
+- name: Enable apache2 vhosts
+  shell: "a2ensite {{ item['host'] }}.conf"
+  notify: Apache reload
+  with_items: vhost_sites
   when: "item['disabled']|default(false) != True"

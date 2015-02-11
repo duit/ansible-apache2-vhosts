@@ -1,0 +1,50 @@
+---
+apache_packages:
+  - apache2
+  - apache2-utils
+
+apache_modules:
+  - alias
+  - auth_basic
+  - authn_file
+  - authz_groupfile
+  - authz_host
+  - authz_user
+  - autoindex
+  - cgi
+  - deflate
+  - dir
+  - env
+  - expires
+  - headers
+  - mime
+  - negotiation
+  - reqtimeout
+  - rewrite
+  - setenvif
+  - status
+#  - authz_default
+#  - rpaf
+
+apache_host: "127.0.0.1"
+apache_port: "80"
+apache_ssl_port: "443"
+
+vhost_base_path: "/var/www"
+
+vhost_sites:
+  - {
+      host: 'example.com',
+      user: 'example',
+      group: 'example',
+      admin_email: 'admin@example.com',
+      ssl: {
+        enabled: False,
+        ssl_certificate: '/path/to/ssl/cert',
+        ssl_certificate_key: '/path/to/ssl/private_key'
+      },
+      aliases: [
+        www.example.com
+        au.example.com
+      ]
+    }

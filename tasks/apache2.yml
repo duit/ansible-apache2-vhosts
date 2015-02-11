@@ -4,36 +4,50 @@
     pkg: "{{ item }}"
     state: latest
   with_items: apache_packages
-  notify: Restart apache
+  notify: Apache restart
+
+- name: Disable apache2 modules
+  apache2_module:
+    name: "{{ item }}"
+    state: absent
+  with_items: apache_modules_disabled
+  notify: Apache restart
 
 - name: Enable apache2 modules
-  file:
-    src: "/etc/apache2/mods-available/{{ item }}"
-    dest: "/etc/apache2/mods-enabled/{{ item }}"
-    state: link
+  apache2_module:
+    name: "{{ item }}"
+    state: present
   with_items: apache_modules
-  notify: Restart apache
+  notify: Apache restart
+
+- name: Check for a2ensite util
+  shell: "command -v a2ensite >/dev/null 2>&1"
+  changed_when: False
+
+- name: Check for a2dissite util
+  shell: "command -v a2dissite >/dev/null 2>&1"
+  changed_when: False
+
+- name: Check for a2enconf util
+  shell: "command -v a2enconf >/dev/null 2>&1"
+  changed_when: False
 
 - name: Disable default apache site
-  file:
-    path: "/etc/apache2/sites-enabled/000-default"
-    state: absent
-  notify: Restart apache
+  shell: "a2dissite 000-default.conf"
+  notify: Apache reload
 
 - name: Disable default-ssl apache site
-  file:
-    path: "/etc/apache2/sites-enabled/000-default-ssl"
-    state: absent
-  notify: Restart apache
+  shell: "a2dissite default-ssl.conf"
+  notify: Apache reload
 
 - name: Configure Apache ports
   template:
     src: apache2/ports.conf.j2
     dest: /etc/apache2/ports.conf
-  notify: Restart apache
+  notify: Apache restart
 
 - name: Tighten Apache security
   copy:
     src: apache2/security
-    dest: /etc/apache2/conf.d/security
-  notify: Restart apache
+    dest: /etc/apache2/conf-available/security.conf
+  notify: Apache restart

@@ -1,13 +1,12 @@
 ---
 galaxy_info:
-  author: "Andrew Smith"
+  author: "Thiago Lima"
   license: MIT
   min_ansible_version: 1.4
   platforms:
-    - name: Debian
+    - name: Ubuntu
       versions:
-        - squeeze
-        - wheezy
+        - trusty
   categories:
     - web
 dependencies: []

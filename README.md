@@ -147,10 +147,3 @@ This is a merge of disabled and any extra sites that should be enabled. It will
 ensure that the user account is present and that they can log in via SSH.
 public_html folders will be created and the config will be symlinked to
 sites-enabled so that apache will server their content.
-
-
-### SSH settings
-
-As part of the creation of the vhosts all files within files/ssh/keys are
-combined and added to each enabled user account. This allows a number of users
-to log into each account as the hosting user.
